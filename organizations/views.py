@@ -179,8 +179,8 @@ def org_remove_member(request, org_slug, user_id):
         )
         services.remove_member(dto)
 
-        # If they removed themselves, clear active org and go to list
-        if user_id == request.user.id:
+        # int() because user_id from the URL is a string
+        if int(user_id) == request.user.id:
             request.session.pop("active_org_id", None)
             messages.success(request, f"You have left '{org.name}'.")
             return redirect("organizations:list")
@@ -191,7 +191,6 @@ def org_remove_member(request, org_slug, user_id):
         messages.error(request, str(e))
 
     return redirect("organizations:settings", org_slug=org_slug)
-
 
 # Change member role 
 

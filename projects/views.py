@@ -64,21 +64,20 @@ def project_create(request):
 @login_required
 @org_member_required
 def project_detail(request, project_id):
-    """
-    Show project details. User must be a member of the project's org.
-    """
     project = get_object_or_404(
         Project,
         id=project_id,
         organization=request.active_org
     )
+    # Pass form so the edit modal's status dropdown works
+    form = UpdateProjectForm(instance=project)
 
     return render(request, "projects/detail.html", {
         "project":    project,
         "org":        request.active_org,
         "membership": request.membership,
+        "form":       form,
     })
-
 
 # Project edit
 

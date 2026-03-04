@@ -25,7 +25,7 @@
   </div>
 </div>
 
-<div style="display:grid; grid-template-columns:1fr 280px; gap:2rem;">
+<div class="settings-grid">
 
   <!-- Members -->
   <div class="card" style="overflow:hidden;">
@@ -33,7 +33,9 @@
                 display:flex; align-items:center; justify-content:space-between;">
       <div>
         <h2 style="font-size:0.95rem; font-weight:600; color:var(--text);">Members</h2>
-        <p style="font-size:0.75rem; color:var(--muted); margin-top:2px;">{{ members|length }} member{{ members|length|pluralize }}</p>
+        <p style="font-size:0.75rem; color:var(--muted); margin-top:2px;">
+          {{ members|length }} member{{ members|length|pluralize }}
+        </p>
       </div>
       {% if membership.is_admin_or_owner %}
         <button onclick="openModal('modal-invite-member')" class="btn-primary" style="padding:0.5rem 0.875rem;">
@@ -50,24 +52,13 @@
       {% for m in members %}
         <li style="display:flex; align-items:center; justify-content:space-between;
                    padding:0.875rem 1.5rem; border-bottom:1px solid var(--border);">
+
+          <!-- Avatar + name block -->
           <div style="display:flex; align-items:center; gap:0.75rem;">
-            <div>
-              <p style="font-size:0.875rem;font-weight:500;color:var(--text);">
-                {{ m.user.get_full_name|default:m.user.username }}
-                {% if m.user == request.user %}
-                  <span style="font-size:0.72rem;color:var(--muted);font-weight:400;"> (you)</span>
-                {% endif %}
-              </p>
-              <p style="font-size:0.75rem;color:var(--muted);">@{{ m.user.username }}</p>
-              <p style="font-size:0.72rem;color:var(--muted);margin-top:1px;">
-                {% if m.invited_by %}
-                  Added by {{ m.invited_by.username }} · {{ m.joined_at|date:"N j, Y" }}
-                {% elif m.is_owner %}
-                  Founder · {{ m.joined_at|date:"N j, Y" }}
-                {% else %}
-                  Joined {{ m.joined_at|date:"N j, Y" }}
-                {% endif %}
-              </p>
+            <div style="width:34px; height:34px; border-radius:50%; background:var(--brand-lt);
+                        display:flex; align-items:center; justify-content:center;
+                        font-size:0.8rem; font-weight:700; color:var(--brand); flex-shrink:0;">
+              {{ m.user.first_name|first|upper|default:m.user.username|first|upper }}
             </div>
             <div>
               <p style="font-size:0.875rem; font-weight:500; color:var(--text);">
@@ -77,9 +68,19 @@
                 {% endif %}
               </p>
               <p style="font-size:0.75rem; color:var(--muted);">@{{ m.user.username }}</p>
+              <p style="font-size:0.72rem; color:var(--muted); margin-top:1px;">
+                {% if m.invited_by %}
+                  Added by {{ m.invited_by.username }} · {{ m.joined_at|date:"N j, Y" }}
+                {% elif m.is_owner %}
+                  Founder · {{ m.joined_at|date:"N j, Y" }}
+                {% else %}
+                  Joined {{ m.joined_at|date:"N j, Y" }}
+                {% endif %}
+              </p>
             </div>
           </div>
 
+          <!-- Role + actions -->
           <div style="display:flex; align-items:center; gap:0.625rem;">
             {% if membership.is_owner and m.user != request.user and not m.is_owner %}
               <form method="post"
@@ -95,10 +96,10 @@
               <span class="badge badge-{{ m.role }}">{{ m.role }}</span>
             {% endif %}
 
-            {% if membership.is_admin_or_owner and not m.is_owner %}
+            {% if membership.is_admin_or_owner and not m.is_owner and m.user != request.user %}
               <button onclick="openModal('modal-remove-{{ m.user.id }}')"
                       style="background:none; border:none; cursor:pointer; padding:0.25rem;
-                             color:var(--border); border-radius:0.375rem; transition:color 0.15s, background 0.15s;"
+                             color:var(--border); border-radius:0.375rem;"
                       onmouseover="this.style.color='var(--accent)'; this.style.background='var(--accent-lt)'"
                       onmouseout="this.style.color='var(--border)'; this.style.background='none'">
                 <svg style="width:15px; height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,6 +118,10 @@
     <div class="card" style="padding:1.25rem;">
       <p class="section-label" style="margin-bottom:0.75rem;">Details</p>
       <div style="display:flex; flex-direction:column; gap:0.75rem;">
+        <div>
+          <p style="font-size:0.72rem; color:var(--muted); margin-bottom:2px;">Name</p>
+          <p style="font-size:0.875rem; font-weight:500; color:var(--text);">{{ org.name }}</p>
+        </div>
         <div>
           <p style="font-size:0.72rem; color:var(--muted); margin-bottom:2px;">Slug</p>
           <p style="font-size:0.8rem; font-family:monospace; background:var(--muted-bg);
@@ -139,7 +144,8 @@
       <p style="font-size:0.78rem; color:var(--muted); margin-bottom:1rem; line-height:1.5;">
         Permanently delete this organization and all its data.
       </p>
-      <button onclick="openModal('modal-delete-org')" class="btn-danger" style="width:100%; justify-content:center;">
+      <button onclick="openModal('modal-delete-org')" class="btn-danger"
+              style="width:100%; justify-content:center;">
         Delete organization
       </button>
     </div>
@@ -152,7 +158,7 @@
 
 {% block modals %}
 
-<!-- Rename modal -->
+<!-- Rename org modal -->
 {% if membership.is_admin_or_owner %}
 <div id="modal-rename-org" class="modal-backdrop">
   <div class="modal-box">
@@ -170,7 +176,9 @@
           style="padding:1.5rem; display:flex; flex-direction:column; gap:1.1rem;">
       {% csrf_token %}
       <div>
-        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Name</label>
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">
+          Organization name
+        </label>
         <input type="text" name="name" required value="{{ org.name }}" class="input">
       </div>
       <div style="display:flex; gap:0.75rem;">
@@ -185,7 +193,7 @@
 </div>
 {% endif %}
 
-<!-- Invite modal -->
+<!-- Invite member modal -->
 {% if membership.is_admin_or_owner %}
 <div id="modal-invite-member" class="modal-backdrop">
   <div class="modal-box">
@@ -203,20 +211,24 @@
           style="padding:1.5rem; display:flex; flex-direction:column; gap:1.1rem;">
       {% csrf_token %}
       <div>
-        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Username</label>
-        <input type="text" name="username" required placeholder="Enter username" class="input">
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">
+          Username
+        </label>
+        <input type="text" name="username" required placeholder="Enter their username" class="input">
       </div>
       <div>
-        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Role</label>
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">
+          Role
+        </label>
         <select name="role" class="input">
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
+          <option value="member">Member — can view and create projects</option>
+          <option value="admin">Admin — can manage members and settings</option>
         </select>
       </div>
       <div style="display:flex; gap:0.75rem;">
         <button type="submit" data-spinner class="btn-primary">
           <span class="spinner"></span>
-          <span class="btn-text">Send invite</span>
+          <span class="btn-text">Add member</span>
         </button>
         <button type="button" onclick="closeModal('modal-invite-member')" class="btn-ghost">Cancel</button>
       </div>
@@ -225,7 +237,7 @@
 </div>
 {% endif %}
 
-<!-- Remove member modals -->
+<!-- Remove member modals — one per non-owner member -->
 {% for m in members %}
   {% if not m.is_owner %}
   <div id="modal-remove-{{ m.user.id }}" class="modal-backdrop modal-danger">
@@ -241,10 +253,23 @@
         </button>
       </div>
       <div style="padding:1.5rem;">
-        <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem;">
-          Remove <strong style="color:var(--text);">{{ m.user.username }}</strong> from
-          <strong style="color:var(--text);">{{ org.name }}</strong>?
-          They'll lose access immediately.
+        <div style="display:flex; align-items:center; gap:0.75rem; padding:0.875rem;
+                    background:var(--muted-bg); border-radius:0.625rem; margin-bottom:1.25rem;">
+          <div style="width:34px; height:34px; border-radius:50%; background:var(--brand-lt);
+                      display:flex; align-items:center; justify-content:center;
+                      font-size:0.8rem; font-weight:700; color:var(--brand); flex-shrink:0;">
+            {{ m.user.first_name|first|upper|default:m.user.username|first|upper }}
+          </div>
+          <div>
+            <p style="font-size:0.875rem; font-weight:500; color:var(--text);">
+              {{ m.user.get_full_name|default:m.user.username }}
+            </p>
+            <p style="font-size:0.75rem; color:var(--muted);">@{{ m.user.username }} · {{ m.role }}</p>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:0.875rem; margin-bottom:1.5rem;">
+          Remove them from <strong style="color:var(--text);">{{ org.name }}</strong>?
+          They will lose access immediately.
         </p>
         <form method="post"
               action="{% url 'organizations:remove_member' org_slug=org.slug user_id=m.user.id %}"
@@ -254,7 +279,9 @@
             <span class="spinner"></span>
             <span class="btn-text">Remove</span>
           </button>
-          <button type="button" onclick="closeModal('modal-remove-{{ m.user.id }}')" class="btn-ghost">Cancel</button>
+          <button type="button" onclick="closeModal('modal-remove-{{ m.user.id }}')" class="btn-ghost">
+            Cancel
+          </button>
         </form>
       </div>
     </div>
@@ -279,10 +306,10 @@
     <div style="padding:1.5rem;">
       <div style="background:#fdf7f5; border:1px solid #e8c4b4; border-radius:0.75rem;
                   padding:1rem; margin-bottom:1.5rem;">
-        <p style="font-size:0.8rem; font-weight:600; color:var(--accent); margin-bottom:0.375rem;">
+        <p style="font-size:0.8rem; font-weight:600; color:var(--accent); margin-bottom:0.5rem;">
           This will permanently delete:
         </p>
-        <ul style="font-size:0.8rem; color:var(--muted); padding-left:1.1rem; margin:0; line-height:1.8;">
+        <ul style="font-size:0.8rem; color:var(--muted); padding-left:1.1rem; margin:0; line-height:1.9;">
           <li>The organization <strong style="color:var(--text);">{{ org.name }}</strong></li>
           <li>All projects inside it</li>
           <li>All memberships</li>
