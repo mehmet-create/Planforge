@@ -6,7 +6,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from organizations.decorators import org_admin_required, org_member_required
-from organizations.services import get_active_organization
 from projects.forms import CreateProjectForm, UpdateProjectForm
 from projects.models import Project
 
@@ -27,8 +26,8 @@ def project_list(request):
     ).order_by("-created_at")
 
     return render(request, "projects/list.html", {
-        "projects":   projects,
-        "org":        request.active_org,
+        "projects": projects,
+        "org": request.active_org,
         "membership": request.membership,
     })
 
@@ -36,7 +35,7 @@ def project_list(request):
 # Project create
 
 @login_required
-@org_member_required
+@org_admin_required
 @require_http_methods(["GET", "POST"])
 def project_create(request):
     """
@@ -47,15 +46,15 @@ def project_create(request):
     if request.method == "POST" and form.is_valid():
         project = form.save(commit=False)
         project.organization = request.active_org
-        project.created_by   = request.user
+        project.created_by = request.user
         project.save()
 
         messages.success(request, f"'{project.name}' created.")
-        return redirect("projects:detail", project_id=project.id)
+        return redirect("projects:detail", project_uuid=project.uuid)
 
     return render(request, "projects/create.html", {
         "form": form,
-        "org":  request.active_org,
+        "org": request.active_org,
     })
 
 
@@ -63,10 +62,10 @@ def project_create(request):
 
 @login_required
 @org_member_required
-def project_detail(request, project_id):
+def project_detail(request, project_uuid):
     project = get_object_or_404(
         Project,
-        id=project_id,
+        uuid=project_uuid,
         organization=request.active_org
     )
     # Pass form so the edit modal's status dropdown works
@@ -82,16 +81,16 @@ def project_detail(request, project_id):
 # Project edit
 
 @login_required
-@org_member_required
+@org_admin_required
 @require_http_methods(["GET", "POST"])
-def project_edit(request, project_id):
+def project_edit(request, project_uuid):
     """
     Any member can edit a project for now.
     We can restrict this to admin/owner in Phase 6 if needed.
     """
     project = get_object_or_404(
         Project,
-        id=project_id,
+        uuid=project_uuid,
         organization=request.active_org
     )
 
@@ -100,7 +99,7 @@ def project_edit(request, project_id):
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, f"'{project.name}' updated.")
-        return redirect("projects:detail", project_id=project.id)
+        return redirect("projects:detail", project_uuid=project.uuid)
 
     return render(request, "projects/edit.html", {
         "form":    form,
@@ -114,13 +113,13 @@ def project_edit(request, project_id):
 @login_required
 @org_admin_required
 @require_POST
-def project_delete(request, project_id):
+def project_delete(request, project_uuid):
     """
     Only admins and owners can delete projects.
     """
     project = get_object_or_404(
         Project,
-        id=project_id,
+        uuid=project_uuid,
         organization=request.active_org
     )
 

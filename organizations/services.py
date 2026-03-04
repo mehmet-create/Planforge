@@ -212,74 +212,58 @@ def invite_member(dto):
 
 def remove_member(dto):
     """
-    Remove a user from an organization.
-
-    Rules:
-    - Admins and owners can remove regular members
-    - Only the owner can remove an admin
-    - Nobody can remove the owner (they must delete the org or transfer ownership)
-    - A user can remove themselves (leave the org), unless they are the owner
+    Remove a member from an organization by their membership UUID.
     """
     acting_membership = _get_membership(dto.acting_user_id, dto.organization_id)
 
     try:
         target_membership = Membership.objects.get(
-            user_id=dto.target_user_id,
-            organization_id=dto.organization_id
+            uuid=dto.target_membership_uuid,
+            organization_id=dto.organization_id,
         )
     except Membership.DoesNotExist:
-        raise ServiceError("That user is not a member of this organization.")
+        raise ServiceError("That membership does not exist.")
 
-    # Owners cannot be removed — they must delete the org or transfer ownership first
+    # Owners cannot be removed
     if target_membership.is_owner:
-        raise PermissionDenied("The owner cannot be removed. Delete the organization or transfer ownership first.")
+        raise PermissionDenied("The organization owner cannot be removed.")
 
-    # Only owners can remove admins
+    # Admins can only be removed by the owner
     if target_membership.is_admin and not acting_membership.is_owner:
         raise PermissionDenied("Only the owner can remove an admin.")
 
-    # Members can only remove themselves or be removed by admin/owner
-    is_self_removal = dto.acting_user_id == dto.target_user_id
-    if not is_self_removal and not acting_membership.is_admin_or_owner:
-        raise PermissionDenied("You do not have permission to remove this member.")
+    # Regular members can remove themselves
+    is_self = target_membership.user_id == dto.acting_user_id
+    if not is_self and not acting_membership.is_admin_or_owner:
+        raise PermissionDenied("You don't have permission to remove this member.")
 
     target_membership.delete()
-    logger.info(
-        "User %s removed from org %s by user %s",
-        dto.target_user_id, dto.organization_id, dto.acting_user_id
-    )
-    return True
+    return target_membership.user_id   # return so view can detect self-removal
 
 
 def change_member_role(dto):
     """
     Change a member's role within an organization.
-
-    Rules:
-    - Only the owner can change roles
-    - The owner's own role cannot be changed
+    Only the owner can do this.
     """
     _require_owner(dto.acting_user_id, dto.organization_id)
 
-    # Owner cannot change their own role
-    if dto.acting_user_id == dto.target_user_id:
-        raise PermissionDenied("You cannot change your own role.")
-
     try:
         target_membership = Membership.objects.get(
-            user_id=dto.target_user_id,
-            organization_id=dto.organization_id
+            uuid=dto.target_membership_uuid,
+            organization_id=dto.organization_id,
         )
     except Membership.DoesNotExist:
-        raise ServiceError("That user is not a member of this organization.")
+        raise ServiceError("That membership does not exist.")
 
-    # Prevent assigning owner role — ownership transfer is a separate operation
-    if dto.new_role == Membership.Role.OWNER:
-        raise ServiceError("Use transfer ownership to assign a new owner.")
+    if target_membership.user_id == dto.acting_user_id:
+        raise PermissionDenied("You cannot change your own role.")
+
+    if target_membership.is_owner:
+        raise PermissionDenied("The owner's role cannot be changed.")
 
     target_membership.role = dto.new_role
-    target_membership.save(update_fields=["role"])
-
+    target_membership.save()
     return target_membership
 
 

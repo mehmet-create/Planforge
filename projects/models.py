@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from organizations.models import Organization
+import uuid
 
 # Create your models here.
 
@@ -28,7 +29,14 @@ class Project(models.Model):
         NGN = "NGN", "NGN — Nigerian Naira"
         GHS = "GHS", "GHS — Ghanaian Cedi"
         KES = "KES", "KES — Kenyan Shilling"
-        ZAR = "ZAR", "ZAR — South African Rand"    
+        ZAR = "ZAR", "ZAR — South African Rand"  
+
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        db_index=True,
+    )      
 
     name = models.CharField(max_length=200)
 

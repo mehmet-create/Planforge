@@ -2,7 +2,7 @@
 # Same pattern as accounts/schemas.py
 
 from dataclasses import dataclass
-
+import uuid
 
 @dataclass
 class CreateOrganizationDTO:
@@ -49,14 +49,14 @@ class InviteMemberDTO:
 class RemoveMemberDTO:
     organization_id: int
     acting_user_id: int   # who is performing the removal
-    target_user_id: int   # who is being removed
+    target_user_uuid: str   # who is being removed
 
 
 @dataclass
 class ChangeMemberRoleDTO:
     organization_id: int
     acting_user_id: int
-    target_user_id: int
+    target_user_uuid: str
     new_role: str
 
     def __post_init__(self):

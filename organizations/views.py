@@ -168,19 +168,18 @@ def org_invite_member(request, org_slug):
 
 @login_required
 @require_POST
-def org_remove_member(request, org_slug, user_id):
+def org_remove_member(request, org_slug, membership_uuid):
     org = get_object_or_404(Organization, slug=org_slug)
 
     try:
         dto = RemoveMemberDTO(
             organization_id=org.id,
             acting_user_id=request.user.id,
-            target_user_id=user_id,
+            target_membership_uuid=membership_uuid,
         )
-        services.remove_member(dto)
+        removed_user_id = services.remove_member(dto)
 
-        # int() because user_id from the URL is a string
-        if int(user_id) == request.user.id:
+        if removed_user_id == request.user.id:
             request.session.pop("active_org_id", None)
             messages.success(request, f"You have left '{org.name}'.")
             return redirect("organizations:list")
@@ -197,7 +196,7 @@ def org_remove_member(request, org_slug, user_id):
 @login_required
 @org_owner_required
 @require_POST
-def org_change_member_role(request, org_slug, user_id):
+def org_change_member_role(request, org_slug, membership_uuid):
     form = ChangeMemberRoleForm(request.POST)
 
     if form.is_valid():
@@ -205,7 +204,7 @@ def org_change_member_role(request, org_slug, user_id):
             dto = ChangeMemberRoleDTO(
                 organization_id=request.active_org.id,
                 acting_user_id=request.user.id,
-                target_user_id=user_id,
+                target_membership_uuid=membership_uuid,
                 new_role=form.cleaned_data["role"],
             )
             services.change_member_role(dto)
@@ -217,7 +216,6 @@ def org_change_member_role(request, org_slug, user_id):
         messages.error(request, "Invalid role.")
 
     return redirect("organizations:settings", org_slug=org_slug)
-
 
 # Delete organization
 

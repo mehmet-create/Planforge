@@ -1,39 +1,29 @@
-from django.shortcuts import render, get_object_or_404, redirect
 import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST, require_http_methods
-from organizations.decorators import org_member_required, org_admin_required
+
+from organizations.decorators import org_admin_required, org_member_required
 from projects.models import Project
 from . import services
 from .models import Blueprint
 from .schemas import DeleteBlueprintDTO, GenerateBlueprintDTO
-# Create your views here.
-
 
 logger = logging.getLogger(__name__)
 
 
 @login_required
-@org_member_required
+@org_admin_required          
 @require_http_methods(["GET", "POST"])
-def blueprint_generate(request, project_id):
-    """
-    GET  — show the generate form for this project
-    POST — call Gemini, save result, redirect to the result page
-    """
-
+def blueprint_generate(request, project_uuid):
     project = get_object_or_404(
         Project,
-        id=project_id,
+        uuid=project_uuid,
         organization=request.active_org
     )
 
-    if not request.membership.is_admin_or_owner:
-        messages.error(request, "You need admin or owner access for this action.")
-        return redirect("projects:detail", project_id=project.id)
-    
-    # Past blueprints for this project (shown in sidebar)
     past_blueprints = services.get_project_blueprints(
         project.id, request.active_org.id
     )
@@ -58,7 +48,7 @@ def blueprint_generate(request, project_id):
             )
             blueprint = services.generate_blueprint(dto)
             messages.success(request, "Blueprint generated successfully.")
-            return redirect("blueprints:detail", blueprint_id=blueprint.id)
+            return redirect("blueprints:detail", blueprint_uuid=blueprint.uuid)
 
         except (services.ServiceError, ValueError) as e:
             messages.error(request, str(e))
@@ -76,7 +66,7 @@ def blueprint_generate(request, project_id):
 
 
 @login_required
-@org_member_required
+@org_member_required                  
 def blueprint_detail(request, blueprint_uuid):
     blueprint = get_object_or_404(
         Blueprint,
@@ -84,26 +74,23 @@ def blueprint_detail(request, blueprint_uuid):
         organization=request.active_org
     )
     return render(request, "blueprints/detail.html", {
-        "blueprint": blueprint,
-        "project":   blueprint.project,
-        "result":    blueprint.result,
+        "blueprint":  blueprint,
+        "project":    blueprint.project,
+        "result":     blueprint.result,
     })
 
-@login_required
-@org_member_required
-def blueprint_list(request):
-    """
-    All blueprints for the active org, grouped by project.
-    """
-    blueprints = services.get_org_blueprints(request.active_org.id)
 
+@login_required
+@org_member_required                   
+def blueprint_list(request):
+    blueprints = services.get_org_blueprints(request.active_org.id)
     return render(request, "blueprints/list.html", {
         "blueprints": blueprints,
     })
 
 
 @login_required
-@org_member_required
+@org_admin_required                    
 @require_POST
 def blueprint_delete(request, blueprint_uuid):
     try:
@@ -118,8 +105,9 @@ def blueprint_delete(request, blueprint_uuid):
         messages.error(request, str(e))
     return redirect("blueprints:list")
 
+
 @login_required
-@org_member_required
+@org_admin_required            
 @require_POST
 def blueprint_export(request, blueprint_uuid):
     try:
@@ -129,7 +117,7 @@ def blueprint_export(request, blueprint_uuid):
             acting_user_id=request.user.id,
         )
         messages.success(request, f"Blueprint exported to '{project.name}'.")
-        return redirect("projects:detail", project_id=project.id)
+        return redirect("projects:detail", project_uuid=project.uuid)
     except (services.ServiceError, services.PermissionDenied) as e:
         messages.error(request, str(e))
         return redirect("blueprints:detail", blueprint_uuid=blueprint_uuid)

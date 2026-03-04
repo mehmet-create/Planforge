@@ -14,21 +14,27 @@
       <h1 class="font-serif" style="font-size:1.6rem;font-weight:600;color:var(--text);">{{ project.name }}</h1>
       <span class="badge badge-{{ project.status }}">{{ project.get_status_display }}</span>
     </div>
-    <p style="color:var(--muted);font-size:0.85rem;margin-top:0.25rem;">
-      Created by <span style="color:var(--text);">{{ project.created_by.username|default:"—" }}</span>
-      · {{ project.created_at|date:"N j, Y" }}
-    </p>
+    <div>
+      <p style="font-size:0.72rem;color:var(--muted);margin-bottom:3px;">Created by</p>
+      <p style="font-size:0.875rem;color:var(--text);">
+        {% if project.created_by %}
+          {{ project.created_by.get_full_name|default:project.created_by.username }}
+        {% else %}
+          —
+        {% endif %}
+      </p>
+    </div>
   </div>
 
   <div class="page-header-actions" style="display:flex;gap:0.5rem;">
-    <button onclick="openModal('modal-edit-project')" class="btn-ghost">
-      <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-      </svg>
-      Edit
-    </button>
     {% if membership.is_admin_or_owner %}
+      <button onclick="openModal('modal-edit-project')" class="btn-ghost">
+        <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+        Edit
+      </button>
       <button onclick="openModal('modal-delete-project')"
               class="btn-ghost" style="color:var(--accent);border-color:#e8c4b4;">
         <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,8 +47,7 @@
   </div>
 </div>
 
-<!-- Project info cards -->
-<div style="display:grid;grid-template-columns:1fr 260px;gap:1.5rem;align-items:start;">
+<div class="settings-grid">
 
   <!-- Description -->
   <div class="card" style="padding:1.75rem;">
@@ -53,24 +58,26 @@
     {% else %}
       <p style="color:var(--muted);font-style:italic;font-size:0.9rem;">
         No description yet.
-        <button onclick="openModal('modal-edit-project')"
-                style="background:none;border:none;color:var(--brand);cursor:pointer;
-                       font-style:normal;font-size:0.9rem;padding:0;font-family:inherit;"
-                onmouseover="this.style.textDecoration='underline'"
-                onmouseout="this.style.textDecoration='none'">Add one.</button>
+        {% if membership.is_admin_or_owner %}
+          <button onclick="openModal('modal-edit-project')"
+                  style="background:none;border:none;color:var(--brand);cursor:pointer;
+                         font-style:normal;font-size:0.9rem;padding:0;font-family:inherit;"
+                  onmouseover="this.style.textDecoration='underline'"
+                  onmouseout="this.style.textDecoration='none'">Add one.</button>
+        {% endif %}
       </p>
     {% endif %}
   </div>
 
-  <!-- Meta sidebar -->
+  <!-- Sidebar -->
   <div style="display:flex;flex-direction:column;gap:1rem;">
     <div class="card" style="padding:1.25rem;">
       <p style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;
                 letter-spacing:0.06em;margin-bottom:0.875rem;">Details</p>
-      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div style="display:flex;flex-direction:column;gap:0.875rem;">
 
         <div>
-          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:2px;">Status</p>
+          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:3px;">Status</p>
           <span class="badge badge-{{ project.status }}">{{ project.get_status_display }}</span>
         </div>
 
@@ -85,7 +92,9 @@
 
         <div>
           <p style="font-size:0.72rem;color:var(--muted);margin-bottom:3px;">Created by</p>
-          <p style="font-size:0.875rem;color:var(--text);">{{ project.created_by.get_full_name|default:project.created_by.username|default:"—" }}</p>
+          <p style="font-size:0.875rem;color:var(--text);">
+            {{ project.created_by.get_full_name|default:project.created_by.username|default:"—" }}
+          </p>
         </div>
 
         <div>
@@ -101,14 +110,15 @@
       </div>
     </div>
 
-    <!-- Blueprint CTA — Phase 8 will wire this up -->
+    <!-- AI Blueprint CTA — admins/owners only -->
+    {% if membership.is_admin_or_owner %}
     <div style="background:var(--brand-lt);border:1px solid #c0d9d0;border-radius:0.875rem;padding:1.25rem;">
       <p style="font-size:0.8rem;font-weight:600;color:var(--brand);margin-bottom:0.375rem;">AI Blueprint</p>
       <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.875rem;line-height:1.5;">
         Generate a cost estimate, timeline, and recommendations for this project.
       </p>
-      <a href="{% url 'blueprints:generate' project_id=project.id %}" class="btn-primary"
-        style="width:100%;justify-content:center;font-size:0.8rem;text-decoration:none;">
+      <a href="{% url 'blueprints:generate' project_uuid=project.uuid %}" class="btn-primary"
+         style="width:100%;justify-content:center;font-size:0.8rem;text-decoration:none;display:flex;">
         <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -116,6 +126,14 @@
         Generate Blueprint
       </a>
     </div>
+    {% else %}
+    <div style="background:var(--muted-bg);border:1px solid var(--border);border-radius:0.875rem;padding:1.25rem;">
+      <p style="font-size:0.8rem;font-weight:600;color:var(--muted);margin-bottom:0.375rem;">AI Blueprint</p>
+      <p style="font-size:0.78rem;color:var(--muted);line-height:1.5;">
+        Blueprints can be generated by admins and owners.
+      </p>
+    </div>
+    {% endif %}
 
   </div>
 </div>
@@ -123,6 +141,7 @@
 
 
 {% block modals %}
+{% if membership.is_admin_or_owner %}
 <!-- Edit modal -->
 <div id="modal-edit-project" class="modal-backdrop">
   <div class="modal-box">
@@ -136,7 +155,7 @@
         </svg>
       </button>
     </div>
-    <form method="post" action="{% url 'projects:edit' project_id=project.id %}"
+    <form method="post" action="{% url 'projects:edit' project_uuid=project.uuid %}"
           style="padding:1.5rem;display:flex;flex-direction:column;gap:1.1rem;">
       {% csrf_token %}
       <div>
@@ -161,8 +180,7 @@
             Budget <span style="color:var(--muted);font-weight:400;">(optional)</span>
           </label>
           <input type="number" name="budget" min="0" step="0.01" class="input"
-                 placeholder="e.g. 25000"
-                 value="{{ project.budget|default:'' }}">
+                 placeholder="e.g. 25000" value="{{ project.budget|default:'' }}">
         </div>
         <div>
           <label style="display:block;font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.5rem;">Currency</label>
@@ -185,7 +203,6 @@
 </div>
 
 <!-- Delete modal -->
-{% if membership.is_admin_or_owner %}
 <div id="modal-delete-project" class="modal-backdrop modal-danger">
   <div class="modal-box">
     <div style="display:flex;align-items:center;justify-content:space-between;
@@ -202,7 +219,7 @@
       <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;">
         Delete <strong style="color:var(--text);">{{ project.name }}</strong>? This cannot be undone.
       </p>
-      <form method="post" action="{% url 'projects:delete' project_id=project.id %}"
+      <form method="post" action="{% url 'projects:delete' project_uuid=project.uuid %}"
             style="display:flex;gap:0.75rem;">
         {% csrf_token %}
         <button type="submit" data-spinner class="btn-danger">

@@ -233,7 +233,6 @@ def get_blueprint(blueprint_uuid, organization_id: int) -> Blueprint:
     except Blueprint.DoesNotExist:
         raise ServiceError("Blueprint not found.")
 
-
 def delete_blueprint(dto) -> None:
     try:
         blueprint = Blueprint.objects.get(
@@ -242,9 +241,6 @@ def delete_blueprint(dto) -> None:
         )
     except Blueprint.DoesNotExist:
         raise ServiceError("Blueprint not found.")
-
-    if blueprint.created_by_id != dto.acting_user_id:
-        raise PermissionDenied("You can only delete your own blueprints.")
 
     blueprint.delete()
 

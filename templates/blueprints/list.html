@@ -15,7 +15,7 @@
   <div style="display:flex;flex-direction:column;gap:0.75rem;">
     {% for bp in blueprints %}
       <div class="card">
-        <a href="{% url 'blueprints:detail' blueprint_uuid=bp.id %}"
+        <a href="{% url 'blueprints:detail' blueprint_uuid=bp.uuid %}"
            style="display:flex;align-items:center;justify-content:space-between;
                   padding:1.25rem 1.5rem;text-decoration:none;gap:1rem;transition:background 0.15s;"
            onmouseover="this.style.background='var(--bg)'"

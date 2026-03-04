@@ -8,7 +8,7 @@
       <a href="{% url 'projects:list' %}" style="color:var(--muted);text-decoration:none;"
          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Projects</a>
       <span>›</span>
-      <a href="{% url 'projects:detail' project_id=project.id %}"
+      <a href="{% url 'projects:detail' project_uuid=project.uuid %}"
          style="color:var(--muted);text-decoration:none;"
          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
         {{ project.name }}
@@ -86,7 +86,7 @@
           <span class="spinner"></span>
           <span class="btn-text">Save Changes</span>
         </button>
-        <a href="{% url 'projects:detail' project_id=project.id %}" class="btn-ghost">Cancel</a>
+        <a href="{% url 'projects:detail' project_uuid=project.uuid %}" class="btn-ghost">Cancel</a>
       </div>
     </form>
   </div>

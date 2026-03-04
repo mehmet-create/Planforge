@@ -58,6 +58,12 @@ class Membership(models.Model):
         ADMIN  = "admin",  "Admin"
         MEMBER = "member", "Member"
 
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        db_index=True,
+    )
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

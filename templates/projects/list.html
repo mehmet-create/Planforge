@@ -24,13 +24,18 @@
     <ul style="list-style:none;margin:0;padding:0;">
       {% for project in projects %}
         <li style="border-bottom:1px solid var(--border);">
-          <a href="{% url 'projects:detail' project_id=project.id %}" class="list-row">
+          <a href="{% url 'projects:detail' project_uuid=project.uuid %}" class="list-row">
             <div class="list-row-left">
-              <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;" class="dot-{{ project.status }}"></span>
+              <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;"
+                    class="dot-{{ project.status }}"></span>
               <div style="min-width:0;">
-                <p style="font-size:0.9rem;font-weight:500;color:var(--text);" class="truncate">{{ project.name }}</p>
+                <p style="font-size:0.9rem;font-weight:500;color:var(--text);" class="truncate">
+                  {{ project.name }}
+                </p>
                 {% if project.description %}
-                  <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;" class="truncate">{{ project.description }}</p>
+                  <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;" class="truncate">
+                    {{ project.description }}
+                  </p>
                 {% endif %}
               </div>
             </div>

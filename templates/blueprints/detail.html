@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}Blueprint — {{ project.name }}{% endblock %}
 
 {% block content %}
@@ -8,7 +9,7 @@
       <a href="{% url 'projects:list' %}" style="color:var(--muted);text-decoration:none;"
          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Projects</a>
       <span>›</span>
-      <a href="{% url 'projects:detail' project_id=project.id %}"
+      <a href="{% url 'projects:detail' project_uuid=project.uuid %}"
          style="color:var(--muted);text-decoration:none;"
          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
         {{ project.name }}
@@ -26,7 +27,7 @@
   </div>
 
   <div class="page-header-actions" style="display:flex;gap:0.5rem;">
-    <form method="post" action="{% url 'blueprints:export' blueprint_uuid=blueprint.id %}">
+    <form method="post" action="{% url 'blueprints:export' blueprint_uuid=blueprint.uuid %}">
       {% csrf_token %}
       <button type="submit" class="btn-ghost"
               title="Copies overview → project description and total_min → project budget (only if not already set)">
@@ -38,7 +39,7 @@
       </button>
     </form>
 
-    <a href="{% url 'blueprints:generate' project_id=project.id %}" class="btn-ghost">
+    <a href="{% url 'blueprints:generate' project_uuid=project.uuid %}" class="btn-ghost">
       <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -102,7 +103,7 @@
               </div>
               <div style="text-align:right;flex-shrink:0;">
                 <p style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;">
-                  {{ project.currency }} {{ item.min|floatformat:"0" }} – {{ item.max|floatformat:"0" }}
+                  {{ project.currency }} {{ item.min|floatformat:"0"|intcomma }} – {{ item.max|floatformat:"0"|intcomma }}
                 </p>
               </div>
             </div>
@@ -116,7 +117,7 @@
                     display:flex;align-items:center;justify-content:space-between;">
           <p style="font-size:0.875rem;font-weight:700;color:var(--brand);">Total Estimate</p>
           <p style="font-size:0.95rem;font-weight:700;color:var(--brand);white-space:nowrap;">
-            {{ project.currency }} {{ result.total_min|floatformat:"0" }} – {{ result.total_max|floatformat:"0" }}
+            {{ project.currency }} {{ result.total_min|floatformat:"0"|intcomma }} – {{ result.total_max|floatformat:"0"|intcomma }}
           </p>
         </div>
       {% endif %}
@@ -179,7 +180,7 @@
 {% else %}
   <div class="card" style="padding:3rem;text-align:center;">
     <p style="color:var(--accent);">This blueprint failed to generate. Please try again.</p>
-    <a href="{% url 'blueprints:generate' project_id=project.id %}"
+    <a href="{% url 'blueprints:generate' project_uuid=project.uuid %}"
        class="btn-primary" style="margin-top:1rem;">Try again</a>
   </div>
 {% endif %}
@@ -205,7 +206,7 @@
       <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;">
         Delete this blueprint? This cannot be undone.
       </p>
-      <form method="post" action="{% url 'blueprints:delete' blueprint_uuid=blueprint.id %}"
+      <form method="post" action="{% url 'blueprints:delete' blueprint_uuid=blueprint.uuid %}"
             style="display:flex;gap:0.75rem;">
         {% csrf_token %}
         <button type="submit" data-spinner class="btn-danger">
