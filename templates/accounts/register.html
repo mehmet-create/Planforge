@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Create account — Planforge{% endblock %}
+
+{% block content %}
+<div style="min-height:80vh; display:flex; align-items:center; justify-content:center; padding:2rem 0;">
+  <div style="width:100%; max-width:480px;">
+
+    <div style="text-align:center; margin-bottom:2rem;">
+      <p class="font-serif" style="font-size:1.75rem; font-weight:600; color:#1F2933;">
+        Plan<span style="color:#315C4B;">forge</span>
+      </p>
+      <p style="color:var(--muted); margin-top:0.375rem; font-size:0.9rem;">Create your account</p>
+    </div>
+
+    <div class="auth-card">
+      <form method="post" style="display:flex; flex-direction:column; gap:1.1rem;">
+        {% csrf_token %}
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+          <div>
+            <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">First name</label>
+            <input type="text" name="first_name" required value="{{ form.first_name.value|default:'' }}"
+                   class="input {% if form.first_name.errors %}input-error{% endif %}" placeholder="First">
+            {% if form.first_name.errors %}
+              <p style="font-size:0.72rem; color:var(--accent); margin-top:0.25rem;">{{ form.first_name.errors|join:", " }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Last name</label>
+            <input type="text" name="last_name" required value="{{ form.last_name.value|default:'' }}"
+                   class="input {% if form.last_name.errors %}input-error{% endif %}" placeholder="Last">
+            {% if form.last_name.errors %}
+              <p style="font-size:0.72rem; color:var(--accent); margin-top:0.25rem;">{{ form.last_name.errors|join:", " }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Username</label>
+          <input type="text" name="username" required value="{{ form.username.value|default:'' }}"
+                 class="input {% if form.username.errors %}input-error{% endif %}" placeholder="Choose a username">
+          {% if form.username.errors %}
+            <p style="font-size:0.72rem; color:var(--accent); margin-top:0.25rem;">{{ form.username.errors|join:", " }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Email address</label>
+          <input type="email" name="email" required value="{{ form.email.value|default:'' }}"
+                 class="input {% if form.email.errors %}input-error{% endif %}" placeholder="you@example.com">
+          {% if form.email.errors %}
+            <p style="font-size:0.72rem; color:var(--accent); margin-top:0.25rem;">{{ form.email.errors|join:", " }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Password</label>
+          <input type="password" name="password" required
+                 class="input {% if form.password.errors %}input-error{% endif %}" placeholder="Min. 8 characters">
+          {% if form.password.errors %}
+            <p style="font-size:0.72rem; color:var(--accent); margin-top:0.25rem;">{{ form.password.errors|join:", " }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Confirm password</label>
+          <input type="password" name="confirm_password" required
+                 class="input {% if form.confirm_password.errors %}input-error{% endif %}" placeholder="••••••••">
+          {% if form.confirm_password.errors %}
+            <p style="font-size:0.72rem; color:var(--accent); margin-top:0.25rem;">{{ form.confirm_password.errors|join:", " }}</p>
+          {% endif %}
+        </div>
+
+        <button type="submit" data-spinner class="btn-primary" style="width:100%; justify-content:center; margin-top:0.25rem;">
+          <span class="spinner"></span>
+          <span class="btn-text">Create account</span>
+        </button>
+      </form>
+
+      <p style="text-align:center; margin-top:1.5rem; font-size:0.875rem; color:var(--muted);">
+        Already have an account?
+        <a href="{% url 'accounts:login' %}" style="color:var(--brand); font-weight:600; text-decoration:none;"
+           onmouseover="this.style.textDecoration='underline'"
+           onmouseout="this.style.textDecoration='none'">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

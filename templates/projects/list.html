@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Projects — {{ org.name }}{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem;">
+  <div>
+    <h1 class="font-serif" style="font-size:1.6rem; font-weight:600; color:var(--text);">Projects</h1>
+    <p style="color:var(--muted); margin-top:0.25rem; font-size:0.9rem;">{{ org.name }}</p>
+  </div>
+  <a href="{% url 'projects:create' %}" class="btn-primary">
+    <svg style="width:15px; height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Project
+  </a>
+</div>
+
+{% if projects %}
+  <div class="card" style="overflow:hidden;">
+    <ul style="list-style:none; margin:0; padding:0;">
+      {% for project in projects %}
+        <li style="border-bottom:1px solid var(--border);">
+          <a href="{% url 'projects:detail' project_id=project.id %}"
+             style="display:flex; align-items:center; justify-content:space-between;
+                    padding:1rem 1.5rem; text-decoration:none; transition:background 0.15s;"
+             onmouseover="this.style.background='var(--bg)'"
+             onmouseout="this.style.background='transparent'">
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <span style="width:8px; height:8px; border-radius:50%; flex-shrink:0;"
+                    class="dot-{{ project.status }}"></span>
+              <div>
+                <p style="font-size:0.9rem; font-weight:500; color:var(--text);">{{ project.name }}</p>
+                {% if project.description %}
+                  <p style="font-size:0.8rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:400px;">
+                    {{ project.description }}
+                  </p>
+                {% endif %}
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.75rem; flex-shrink:0;">
+              <span style="font-size:0.75rem; color:var(--muted);">{{ project.created_at|date:"N j, Y" }}</span>
+              <span class="badge badge-{{ project.status }}">{{ project.get_status_display }}</span>
+              <svg style="width:14px; height:14px; color:var(--border);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% else %}
+  <div class="card" style="padding:3rem; text-align:center;">
+    <p style="color:var(--muted); margin-bottom:1rem;">No projects yet in {{ org.name }}.</p>
+    <a href="{% url 'projects:create' %}" class="btn-primary">Create the first project</a>
+  </div>
+{% endif %}
+{% endblock %}

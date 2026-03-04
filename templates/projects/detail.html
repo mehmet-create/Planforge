@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — Planforge{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:2rem;">
+  <div>
+    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; color:var(--muted); margin-bottom:0.5rem;">
+      <a href="{% url 'projects:list' %}" style="color:var(--muted); text-decoration:none;"
+         onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Projects</a>
+      <span>›</span>
+      <span style="color:var(--text);">{{ project.name }}</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <h1 class="font-serif" style="font-size:1.6rem; font-weight:600; color:var(--text);">{{ project.name }}</h1>
+      <span class="badge badge-{{ project.status }}">{{ project.get_status_display }}</span>
+    </div>
+    <p style="color:var(--muted); font-size:0.85rem; margin-top:0.25rem;">
+      Created by <span style="color:var(--text);">{{ project.created_by.username }}</span>
+      · {{ project.created_at|date:"N j, Y" }}
+    </p>
+  </div>
+
+  <div style="display:flex; gap:0.5rem;">
+    <button onclick="openModal('modal-edit-project')" class="btn-ghost">
+      <svg style="width:15px; height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+      </svg>
+      Edit
+    </button>
+    {% if membership.is_admin_or_owner %}
+      <button onclick="openModal('modal-delete-project')" class="btn-danger" style="background:var(--accent-lt); color:var(--accent); border:1.5px solid #e8c4b4;">
+        <svg style="width:15px; height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        Delete
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="padding:1.75rem;">
+  {% if project.description %}
+    <p style="color:var(--text); line-height:1.7; font-size:0.95rem;">{{ project.description }}</p>
+  {% else %}
+    <p style="color:var(--muted); font-style:italic; font-size:0.9rem;">
+      No description yet.
+      <button onclick="openModal('modal-edit-project')"
+              style="background:none; border:none; color:var(--brand); cursor:pointer; font-style:normal;
+                     font-size:0.9rem; padding:0; font-family:inherit;"
+              onmouseover="this.style.textDecoration='underline'"
+              onmouseout="this.style.textDecoration='none'">Add one.</button>
+    </p>
+  {% endif %}
+</div>
+{% endblock %}
+
+
+{% block modals %}
+<!-- Edit modal -->
+<div id="modal-edit-project" class="modal-backdrop">
+  <div class="modal-box">
+    <div style="display:flex; align-items:center; justify-content:space-between;
+                padding:1.25rem 1.5rem; border-bottom:1px solid var(--border);">
+      <h2 style="font-size:1rem; font-weight:600; color:var(--text);">Edit Project</h2>
+      <button onclick="closeModal('modal-edit-project')"
+              style="background:none; border:none; cursor:pointer; color:var(--muted); padding:0;">
+        <svg style="width:18px; height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <form method="post" action="{% url 'projects:edit' project_id=project.id %}"
+          style="padding:1.5rem; display:flex; flex-direction:column; gap:1.1rem;">
+      {% csrf_token %}
+      <div>
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Name</label>
+        <input type="text" name="name" required value="{{ project.name }}" class="input">
+      </div>
+      <div>
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Description</label>
+        <textarea name="description" rows="3" class="input" style="resize:none;">{{ project.description }}</textarea>
+      </div>
+      <div>
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.5rem;">Status</label>
+        <select name="status" class="input">
+          {% for value, label in form.fields.status.choices %}
+            <option value="{{ value }}" {% if project.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex; gap:0.75rem; padding-top:0.25rem;">
+        <button type="submit" data-spinner class="btn-primary">
+          <span class="spinner"></span>
+          <span class="btn-text">Save changes</span>
+        </button>
+        <button type="button" onclick="closeModal('modal-edit-project')" class="btn-ghost">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete modal -->
+{% if membership.is_admin_or_owner %}
+<div id="modal-delete-project" class="modal-backdrop modal-danger">
+  <div class="modal-box">
+    <div style="display:flex; align-items:center; justify-content:space-between;
+                padding:1.25rem 1.5rem; border-bottom:1px solid #e8c4b4;">
+      <h2 style="font-size:1rem; font-weight:600; color:var(--text);">Delete Project</h2>
+      <button onclick="closeModal('modal-delete-project')"
+              style="background:none; border:none; cursor:pointer; color:var(--muted); padding:0;">
+        <svg style="width:18px; height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div style="padding:1.5rem;">
+      <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem;">
+        Delete <strong style="color:var(--text);">{{ project.name }}</strong>? This cannot be undone.
+      </p>
+      <form method="post" action="{% url 'projects:delete' project_id=project.id %}"
+            style="display:flex; gap:0.75rem;">
+        {% csrf_token %}
+        <button type="submit" data-spinner class="btn-danger">
+          <span class="spinner"></span>
+          <span class="btn-text">Delete project</span>
+        </button>
+        <button type="button" onclick="closeModal('modal-delete-project')" class="btn-ghost">Cancel</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,44 @@
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect, render
+import logging
+from organizations.services import get_active_organization, get_user_organizations
+from projects.models import Project
+
+logger = logging.getLogger(__name__)
+
+def home(request):
+    """
+    Landing page for logged-out users.
+    Logged-in users go straight to dashboard.
+    """
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    return render(request, "home.html")
+
+@login_required
+def dashboard(request):
+    """
+    Main landing page after login.
+    If the user has no org, send them to create one.
+    """
+    active_org = get_active_organization(request)
+
+    if not active_org:
+        return redirect("organizations:create")
+
+    recent_projects = Project.objects.filter(
+        organization=active_org
+    ).order_by("-created_at")[:5]
+
+    all_projects_count = Project.objects.filter(
+        organization=active_org
+    ).count()
+
+    members_count = active_org.memberships.count()
+
+    return render(request, "dashboard.html", {
+        "active_org":         active_org,
+        "recent_projects":    recent_projects,
+        "all_projects_count": all_projects_count,
+        "members_count":      members_count,
+    })
