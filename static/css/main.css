@@ -37,6 +37,18 @@ body {
 
 /* ── Responsive layout helpers ──────────────────────────────── */
 
+
+/* Dashboard two-col — stacks on mobile */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+
 /* Page header: title left, action button right.
    On mobile: stacks vertically */
 .page-header {
@@ -65,21 +77,17 @@ body {
 /* Stats row: 3 cols on desktop → 2 on tablet → 1 on mobile */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
 }
 
 /* Settings layout: main content + sidebar.

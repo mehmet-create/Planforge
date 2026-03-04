@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "accounts",
     "organizations",
     "projects",
+    "blueprints",
 ]
 
 MIDDLEWARE = [
@@ -114,3 +115,5 @@ LOGIN_REDIRECT_URL  = "/dashboard/" #redirect to this URL after successful login
 LOGOUT_REDIRECT_URL = "/" #redirect to this URL after logout
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@planforge.dev")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

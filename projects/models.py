@@ -19,6 +19,17 @@ class Project(models.Model):
         COMPLETED = "completed", "Completed"
         ARCHIVED  = "archived",  "Archived"
 
+    class Currency(models.TextChoices):
+        USD = "USD", "USD — US Dollar"
+        EUR = "EUR", "EUR — Euro"
+        GBP = "GBP", "GBP — British Pound"
+        CAD = "CAD", "CAD — Canadian Dollar"
+        AUD = "AUD", "AUD — Australian Dollar"
+        NGN = "NGN", "NGN — Nigerian Naira"
+        GHS = "GHS", "GHS — Ghanaian Cedi"
+        KES = "KES", "KES — Kenyan Shilling"
+        ZAR = "ZAR", "ZAR — South African Rand"    
+
     name = models.CharField(max_length=200)
 
     description = models.TextField(blank=True, default="")
@@ -44,6 +55,19 @@ class Project(models.Model):
         default=Status.ACTIVE
     )
 
+    budget = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    currency = models.CharField(
+        max_length=3,
+        choices=Currency.choices,
+        default=Currency.USD,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -63,3 +87,10 @@ class Project(models.Model):
     @property
     def is_archived(self):
         return self.status == self.Status.ARCHIVED
+    
+    @property
+    def budget_display(self):
+        """Human-readable budget string, e.g. 'USD 12,500.00' or 'Not set'."""
+        if self.budget is None:
+            return "Not set"
+        return f"{self.currency} {self.budget:,.2f}"
