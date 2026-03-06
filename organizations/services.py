@@ -112,8 +112,8 @@ def update_organization(dto):
         raise ServiceError("Organization not found.")
 
     org.name = dto.name
-    # Clear slug so save() regenerates it from the new name
-    org.slug = ""
+    # Slug is intentionally NOT regenerated — it was set once at creation.
+    # Changing the slug would break all existing bookmarks and shared links.
     org.save()
 
     return org

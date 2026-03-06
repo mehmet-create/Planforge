@@ -35,10 +35,18 @@ User = get_user_model()
 # HELPER FUNCTIONS
 
 def get_ip(request):
-    """Extract user's real IP address."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    return x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+    """
+    Extract user's real IP address.
 
+    SECURITY: HTTP_X_FORWARDED_FOR is a client-controlled header — any client
+    can set it to an arbitrary value. We only trust it when Django has been
+    explicitly configured with SECURE_PROXY_SSL_HEADER (i.e. you're behind a
+    known reverse proxy that strips/overwrites the header before it reaches us).
+
+    Until then, always use REMOTE_ADDR which is set by the OS and cannot be
+    spoofed at the TCP level.
+    """
+    return request.META.get('REMOTE_ADDR', '')
 
 def json_response(status='success', message=None, data=None, code=None, http_status=200):
     """Standardized JSON response."""

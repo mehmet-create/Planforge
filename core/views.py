@@ -1,9 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 import logging
-from organizations.services import get_active_organization, get_user_organizations
+from organizations.services import get_active_organization
 from projects.models import Project
 from blueprints.models import Blueprint
+from organizations.services import get_user_membership
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,9 @@ def dashboard(request):
 
     if not active_org:
         return redirect("organizations:create")
+
+    
+    membership = get_user_membership(request.user.id, active_org.id)
 
     recent_projects = Project.objects.filter(
         organization=active_org
@@ -43,6 +47,7 @@ def dashboard(request):
 
     return render(request, "dashboard.html", {
         "active_org":         active_org,
+        "membership":         membership,
         "recent_projects":    recent_projects,
         "all_projects_count": all_projects_count,
         "members_count":      members_count,

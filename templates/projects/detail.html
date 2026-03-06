@@ -93,7 +93,9 @@
         <div>
           <p style="font-size:0.72rem;color:var(--muted);margin-bottom:3px;">Created by</p>
           <p style="font-size:0.875rem;color:var(--text);">
-            {{ project.created_by.get_full_name|default:project.created_by.username|default:"—" }}
+            {% if project.created_by %}
+              {{ project.created_by.get_full_name|default:project.created_by.username }}
+            {% else %}—{% endif %}
           </p>
         </div>
 

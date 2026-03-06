@@ -39,7 +39,7 @@ def project_list(request):
 @require_http_methods(["GET", "POST"])
 def project_create(request):
     """
-    Any member can create a project inside the active organization.
+    "Only admins and owners can create projects."
     """
     form = CreateProjectForm(request.POST or None)
 
@@ -85,8 +85,7 @@ def project_detail(request, project_uuid):
 @require_http_methods(["GET", "POST"])
 def project_edit(request, project_uuid):
     """
-    Any member can edit a project for now.
-    We can restrict this to admin/owner in Phase 6 if needed.
+    "Only admins and owners can edit projects."
     """
     project = get_object_or_404(
         Project,

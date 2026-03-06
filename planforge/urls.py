@@ -28,6 +28,8 @@ urlpatterns = [
     path("", include("core.urls")),
 ]
 
+handler400 = "accounts.views.custom_400_handler"
+handler403 = "accounts.views.custom_403_handler"
 handler404 = "accounts.views.custom_404_handler"
 handler500 = "accounts.views.custom_500_handler"
 

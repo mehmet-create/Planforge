@@ -22,36 +22,40 @@
     </h1>
     <p style="color:var(--muted);font-size:0.85rem;margin-top:0.25rem;">
       Generated {{ blueprint.created_at|date:"N j, Y" }}
-      by {{ blueprint.created_by.get_full_name|default:blueprint.created_by.username }}
+      {% if blueprint.created_by %}
+        by {{ blueprint.created_by.get_full_name|default:blueprint.created_by.username }}
+      {% else %}
+        by —
+      {% endif %}
     </p>
   </div>
 
   <div class="page-header-actions" style="display:flex;gap:0.5rem;">
-    <form method="post" action="{% url 'blueprints:export' blueprint_uuid=blueprint.uuid %}">
-      {% csrf_token %}
-      <button type="submit" class="btn-ghost"
-              title="Copies overview → project description and total_min → project budget (only if not already set)">
+    {% if membership.is_admin_or_owner %}
+      <form method="post" action="{% url 'blueprints:export' blueprint_uuid=blueprint.uuid %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-ghost"
+                title="Copies overview → project description and total min → project budget (only if not already set)">
+          <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Export
+        </button>
+      </form>
+
+      <a href="{% url 'blueprints:generate' project_uuid=project.uuid %}" class="btn-ghost">
         <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
-        Export to project
-      </button>
-    </form>
+        Regenerate
+      </a>
 
-    <a href="{% url 'blueprints:generate' project_uuid=project.uuid %}" class="btn-ghost">
-      <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-      </svg>
-      Regenerate
-    </a>
-
-    {% if blueprint.created_by == request.user %}
-      <button onclick="openModal('modal-delete-blueprint')"
-              class="btn-ghost" style="color:var(--accent);border-color:#e8c4b4;">
-        Delete
-      </button>
+        <button onclick="openModal('modal-delete-blueprint')"
+                class="btn-ghost" style="color:var(--accent);border-color:#e8c4b4;">
+          Delete
+        </button>
     {% endif %}
   </div>
 </div>
@@ -189,7 +193,7 @@
 
 
 {% block modals %}
-{% if blueprint.created_by == request.user %}
+{% if membership.is_admin_or_owner %}
 <div id="modal-delete-blueprint" class="modal-backdrop modal-danger">
   <div class="modal-box">
     <div style="display:flex;align-items:center;justify-content:space-between;

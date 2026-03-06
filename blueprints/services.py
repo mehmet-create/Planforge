@@ -1,9 +1,8 @@
 import json
 import logging
 import os
-
+import uuid
 from django.contrib.auth import get_user_model
-from google import genai
 from projects.models import Project
 from .models import Blueprint, BlueprintMessage
 
@@ -245,7 +244,7 @@ def delete_blueprint(dto) -> None:
     blueprint.delete()
 
 
-def export_blueprint_to_project(blueprint_uuid: int, organization_id: int, acting_user_id: int) -> Project:
+def export_blueprint_to_project(blueprint_uuid: uuid.UUID, organization_id: int, acting_user_id: int) -> Project:
     """
     Apply a blueprint's result back onto its project —
     updates description (if empty) and budget (if not already set).

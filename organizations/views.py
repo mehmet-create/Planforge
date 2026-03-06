@@ -167,9 +167,11 @@ def org_invite_member(request, org_slug):
 # Remove member
 
 @login_required
+@org_admin_required
 @require_POST
 def org_remove_member(request, org_slug, membership_uuid):
-    org = get_object_or_404(Organization, slug=org_slug)
+    # org_admin_required attaches request.active_org — no manual lookup needed
+    org = request.active_org
 
     try:
         dto = RemoveMemberDTO(

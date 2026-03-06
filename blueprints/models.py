@@ -47,7 +47,7 @@ class Blueprint(models.Model):
     result = models.JSONField(default=dict)
 
     # True once Gemini responded successfully
-    is_complete = models.BooleanField(default=False)
+    is_complete = models.BooleanField(default=False, db_index=True)
 
     # If generation failed, store the error for debugging
     error = models.TextField(blank=True, default="")
@@ -89,6 +89,12 @@ class BlueprintMessage(models.Model):
         Blueprint,
         on_delete=models.CASCADE,
         related_name="messages"
+    )
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        db_index=True,
     )
     role    = models.CharField(max_length=10, choices=Role.choices)
     content = models.TextField()

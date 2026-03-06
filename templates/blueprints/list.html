@@ -31,7 +31,7 @@
               {{ bp.prompt|truncatechars:80 }}
             </p>
             <p style="font-size:0.72rem;color:var(--muted);margin-top:4px;">
-              {{ bp.created_at|date:"N j, Y" }} · {{ bp.created_by.username }}
+              {{ bp.created_at|date:"N j, Y" }} · {{ bp.created_by.username|default:"—" }}
             </p>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">

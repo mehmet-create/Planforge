@@ -127,6 +127,12 @@ def verify_code(data: VerifyCodeDTO, acting_user_id: int = None):
         if not profile.email_verification_code:
             raise ServiceError("No verification pending.")
         
+        # Check code has not expired (10-minute window)
+        if profile.code_generated_at:
+            expires_at = profile.code_generated_at + timedelta(minutes=10)
+            if timezone.now() > expires_at:
+                return False, "Verification code has expired. Please request a new one."
+        
         #checks if the provided code does not match the hashed code in the database
         if not check_password(data.code, profile.email_verification_code):
             return False, "Invalid verification code."

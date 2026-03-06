@@ -49,14 +49,14 @@ class InviteMemberDTO:
 class RemoveMemberDTO:
     organization_id: int
     acting_user_id: int   # who is performing the removal
-    target_user_uuid: str   # who is being removed
+    target_membership_uuid: str   # who is being removed
 
 
 @dataclass
 class ChangeMemberRoleDTO:
     organization_id: int
     acting_user_id: int
-    target_user_uuid: str
+    target_membership_uuid: str
     new_role: str
 
     def __post_init__(self):

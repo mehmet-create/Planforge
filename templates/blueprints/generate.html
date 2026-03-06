@@ -114,7 +114,7 @@
                   {{ bp.prompt|truncatechars:50 }}
                 </p>
                 <p style="font-size:0.72rem;color:var(--muted);margin-top:2px;">
-                  {{ bp.created_at|date:"N j, Y" }} · {{ bp.created_by.username }}
+                  {{ bp.created_at|date:"N j, Y" }} · {{ bp.created_by.username|default:"—" }}
                 </p>
                 {% if bp.total_range %}
                   <p style="font-size:0.75rem;color:var(--brand);margin-top:3px;font-weight:500;">

@@ -77,6 +77,7 @@ def blueprint_detail(request, blueprint_uuid):
         "blueprint":  blueprint,
         "project":    blueprint.project,
         "result":     blueprint.result,
+        "membership": request.membership,
     })
 
 
