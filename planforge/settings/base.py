@@ -48,6 +48,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise must be directly after SecurityMiddleware and before everything else.
+    # It intercepts /static/ requests before they ever hit Django's routing,
+    # so WSGI workers are never tied up serving JS/CSS files.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -119,3 +123,31 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@planforge.dev")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# ── Blueprint quota ───────────────────────────────────────────────────────────
+# Maximum number of blueprints one organization can generate per calendar day.
+# Protects API budget and prevents a single org from starving others.
+# Override in prod.py or via env var if you want per-tier limits.
+BLUEPRINT_DAILY_LIMIT = int(os.getenv("BLUEPRINT_DAILY_LIMIT", 20))
+
+# Background task execution
+# Blueprint generation runs on a daemon thread (see blueprints/views.py).
+# This costs zero extra RAM — no separate worker process needed.
+#
+# When you outgrow threads (>~50 concurrent generations, or you need retries /
+# a dead-letter queue), add Celery:
+#   1. pip install celery[redis]
+#   2. Uncomment planforge/celery.py and planforge/__init__.py
+#   3. Add these settings back:
+#        CELERY_BROKER_URL        = os.getenv("CELERY_BROKER_URL", "redis://...")
+#        CELERY_RESULT_BACKEND    = os.getenv("CELERY_RESULT_BACKEND", "redis://...")
+#        CELERY_TASK_TIME_LIMIT   = 120
+#   4. In blueprints/views.py swap the threading block for:
+#        from .tasks import generate_blueprint_task
+#        generate_blueprint_task.delay(blueprint.id)
+#   5. Deploy a Render Background Worker: celery -A planforge worker
+
+# ── Static files (WhiteNoise) ─────────────────────────────────────────────────
+# Compresses and fingerprints static files at collectstatic time so browsers
+# can cache them forever. Far-future Expires headers = zero repeat downloads.
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

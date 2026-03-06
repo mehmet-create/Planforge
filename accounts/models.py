@@ -19,6 +19,12 @@ class UserProfile(models.Model):
     cooldown_until = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Tracks wrong guesses against the current verification code.
+    # After MAX_VERIFY_ATTEMPTS the code is invalidated — user must request a new one.
+    # Reset to 0 whenever a new code is issued or a correct code is submitted.
+    verify_attempts = models.PositiveSmallIntegerField(default=0)
+
+    MAX_VERIFY_ATTEMPTS = 5
     class Meta:
         verbose_name = 'User Profile'
         verbose_name_plural = 'User Profiles'

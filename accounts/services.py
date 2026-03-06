@@ -126,22 +126,37 @@ def verify_code(data: VerifyCodeDTO, acting_user_id: int = None):
         #checks if there is no pending verification
         if not profile.email_verification_code:
             raise ServiceError("No verification pending.")
-        
+
+        # Brute-force guard: too many wrong guesses → invalidate the code.
+        # The attacker must now trigger a new code, which is rate-limited via
+        # the resend cooldown. Resets to 0 on every new code issue.
+        if profile.verify_attempts >= profile.MAX_VERIFY_ATTEMPTS:
+            profile.email_verification_code = None
+            profile.verify_attempts = 0
+            profile.save()
+            return False, "Too many incorrect attempts. Please request a new code."
+
         # Check code has not expired (10-minute window)
         if profile.code_generated_at:
             expires_at = profile.code_generated_at + timedelta(minutes=10)
             if timezone.now() > expires_at:
                 return False, "Verification code has expired. Please request a new one."
-        
+
         #checks if the provided code does not match the hashed code in the database
         if not check_password(data.code, profile.email_verification_code):
-            return False, "Invalid verification code."
-        
+            profile.verify_attempts += 1
+            remaining = profile.MAX_VERIFY_ATTEMPTS - profile.verify_attempts
+            profile.save()
+            if remaining > 0:
+                return False, f"Invalid verification code. {remaining} attempt(s) remaining."
+            return False, "Invalid verification code. No attempts remaining — please request a new code."
+
         #activates user account and clears verification code and resets resend count and cooldown
         user.is_active = True
         user.save()
 
         profile.email_verification_code = None
+        profile.verify_attempts = 0
         profile.resend_count = 0
         profile.cooldown_until = None
         profile.save()
@@ -171,6 +186,7 @@ def resend_code(data: ResendCodeDTO):
         #creates a new verification code, hashes it, and saves to profile with timestamp    
         raw_code = get_random_string(6, allowed_chars='0123456789')
         profile.email_verification_code = make_password(raw_code)
+        profile.verify_attempts = 0  # fresh code = fresh attempt counter
         profile.save()
 
         return True, raw_code, user.email

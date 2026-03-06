@@ -20,8 +20,7 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from django.urls import reverse_lazy
-# CHANGED: imports come from core
-from core.utils import send_email, is_json_request
+from core.utils import send_email, send_email_async, is_json_request
 from core.ratelimit import check_ratelimit, RateLimitError
 
 from .forms import SignUpForm, ProfileUpdateForm, LoginForm, VerifyCodeForm
@@ -36,17 +35,39 @@ User = get_user_model()
 
 def get_ip(request):
     """
-    Extract user's real IP address.
+    Extract the user's real IP address for rate limiting.
 
-    SECURITY: HTTP_X_FORWARDED_FOR is a client-controlled header — any client
-    can set it to an arbitrary value. We only trust it when Django has been
-    explicitly configured with SECURE_PROXY_SSL_HEADER (i.e. you're behind a
-    known reverse proxy that strips/overwrites the header before it reaches us).
+    Two modes, selected automatically based on settings:
 
-    Until then, always use REMOTE_ADDR which is set by the OS and cannot be
-    spoofed at the TCP level.
+    1. Behind a trusted reverse proxy (Nginx, Cloudflare, AWS ALB):
+       Set SECURE_PROXY_SSL_HEADER in prod.py and configure NUM_PROXIES.
+       We then read X-Forwarded-For, skipping the rightmost NUM_PROXIES
+       addresses (which belong to the proxy chain itself).
+
+    2. Direct connection (default / dev):
+       REMOTE_ADDR is used directly — it is set by the OS network stack
+       and cannot be spoofed at the TCP level.
+
+    NEVER enable proxy mode unless your proxy actively strips/overwrites
+    X-Forwarded-For before it reaches Django. Otherwise any client can
+    spoof the header and bypass rate limits entirely.
     """
-    return request.META.get('REMOTE_ADDR', '')
+    from django.conf import settings
+
+    behind_proxy = bool(getattr(settings, "SECURE_PROXY_SSL_HEADER", None))
+
+    if behind_proxy:
+        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded_for:
+            # X-Forwarded-For: client, proxy1, proxy2
+            # We trust the proxy to have appended its own address last.
+            # Strip the rightmost NUM_PROXIES entries (the proxy hops we own).
+            num_proxies = getattr(settings, "NUM_PROXIES", 1)
+            ips = [ip.strip() for ip in forwarded_for.split(",")]
+            client_ips = ips[:-num_proxies] if len(ips) > num_proxies else ips
+            return client_ips[-1] if client_ips else request.META.get("REMOTE_ADDR", "")
+
+    return request.META.get("REMOTE_ADDR", "")
 
 def json_response(status='success', message=None, data=None, code=None, http_status=200):
     """Standardized JSON response."""
@@ -115,8 +136,38 @@ def clear_session_key(request, session_key='unverified_user_id'):
 
 @require_http_methods(["GET", "POST", "HEAD"])
 def health(request):
-    """Health check endpoint."""
-    return json_response('ok')
+    """
+    Health check endpoint for load balancers and uptime monitors.
+    Probes both PostgreSQL and Redis so a broken dependency causes a non-200,
+    which tells the load balancer to stop routing traffic here.
+    """
+    checks = {}
+
+    # Probe PostgreSQL
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        checks["db"] = "ok"
+    except Exception as e:
+        logger.error("Health check: DB probe failed: %s", e)
+        checks["db"] = "error"
+
+    # Probe Redis (cache backend)
+    try:
+        from django.core.cache import cache
+        cache.set("health_check_ping", "pong", timeout=5)
+        result = cache.get("health_check_ping")
+        checks["cache"] = "ok" if result == "pong" else "error"
+    except Exception as e:
+        logger.error("Health check: Cache probe failed: %s", e)
+        checks["cache"] = "error"
+
+    all_ok = all(v == "ok" for v in checks.values())
+    http_status = 200 if all_ok else 503
+    status_label = "ok" if all_ok else "degraded"
+
+    return JsonResponse({"status": status_label, "checks": checks}, status=http_status)
 
 
 def login_view(request):
@@ -222,18 +273,14 @@ def register_view(request):
         messages.error(request, str(e))
         return render(request, 'accounts/register.html', {'form': form})
 
-    success, error = send_email_safe(
+    # Fire the verification email asynchronously — the worker returns to the
+    # client immediately. If delivery fails the user can request a resend.
+    send_email_async(
         user.email,
         "Verify your Planforge account",
         f"<p>Hi {user.first_name},</p><p>Your verification code is: <strong>{code}</strong></p><p>This code expires in 10 minutes.</p>",
-        "registration"
+        "registration",
     )
-
-    if not success:
-        if is_json_request(request):
-            return json_response('error', 'Account created but email failed. Use resend.', http_status=503)
-        messages.warning(request, "Account created but email failed. Use 'Resend Code'.")
-        return redirect('accounts:verify_registration')
 
     if is_json_request(request):
         return json_response('success', 'Check email for code.', data={'email': user.email}, http_status=201)
@@ -317,14 +364,8 @@ def resend_code(request):
             return json_response('ready', 'Send POST to resend code.')
         return redirect('accounts:verify_registration')
 
-    cache_key = f"resend_code_cooldown_{user_id}"
-    if check_cooldown(cache_key):
-        msg = "Please wait a minute before requesting another code."
-        if is_json_request(request):
-            return json_response('error', msg, http_status=429)
-        messages.warning(request, msg)
-        return redirect('accounts:verify_registration')
-
+    # No separate cache cooldown here — services.resend_code() enforces
+    # DB-backed exponential backoff that survives Redis restarts.
     try:
         dto = schemas.ResendCodeDTO(user_id=user_id)
         success, code_or_error, email = services.resend_code(dto)
@@ -336,6 +377,13 @@ def resend_code(request):
             messages.error(request, error_msg)
             return redirect('accounts:verify_registration')
 
+    except services.ServiceError as e:
+        # Catches cooldown errors ("Please wait N seconds.") from the service
+        if is_json_request(request):
+            return json_response('error', str(e), http_status=429)
+        messages.warning(request, str(e))
+        return redirect('accounts:verify_registration')
+
     except Exception as e:
         logger.exception("Code generation failed for user_id=%s: %s", user_id, e)
         if is_json_request(request):
@@ -343,20 +391,12 @@ def resend_code(request):
         messages.error(request, "Failed to generate code.")
         return redirect('accounts:verify_registration')
 
-    email_success, email_error = send_email_safe(
+    send_email_async(
         email,
         "Your new Planforge verification code",
         f"<p>Your new code is: <strong>{code_or_error}</strong></p>",
-        "resend"
+        "resend",
     )
-
-    if not email_success:
-        if is_json_request(request):
-            return json_response('error', email_error, http_status=503)
-        messages.warning(request, email_error)
-        return redirect('accounts:verify_registration')
-
-    set_cooldown(cache_key, 60)
 
     if is_json_request(request):
         return json_response('success', 'Code resent')
@@ -527,18 +567,12 @@ def resend_verification_code_profile(request):
 
         raw_code, email_to = result
 
-        email_success, email_error = send_email_safe(
+        send_email_async(
             email_to,
             "Your New Planforge Code",
             f"<p>Your new verification code is: <strong>{raw_code}</strong></p>",
-            "email_change_resend"
+            "email_change_resend",
         )
-
-        if not email_success:
-            if is_json_request(request):
-                return json_response('error', email_error, http_status=503)
-            messages.warning(request, email_error)
-            return redirect('accounts:verify_email_change')
 
         set_cooldown(cache_key, 60)
 
@@ -616,18 +650,12 @@ def _handle_email_change_request(request):
         messages.error(request, str(e))
         return redirect('accounts:profile')
 
-    email_success, email_error = send_email_safe(
+    send_email_async(
         dto.new_email,
         "Confirm your Planforge email change",
         f"<p>Your email change code is: <strong>{raw_code}</strong></p>",
-        "email_change"
+        "email_change",
     )
-
-    if not email_success:
-        if is_json_request(request):
-            return json_response('error', email_error, http_status=503)
-        messages.warning(request, email_error)
-        return redirect('accounts:profile')
 
     set_cooldown(cache_key, 60)
 

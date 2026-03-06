@@ -18,7 +18,7 @@ class PermissionDenied(ServiceError):
     pass
 
 
-# ── Gemini ───────────────────────────────────────────────────────────────────
+# Gemini
 
 def _call_gemini(prompt: str) -> str:
     """
@@ -134,7 +134,12 @@ Rules:
 """
 
 
-def generate_blueprint(dto) -> Blueprint:
+def create_blueprint_record(dto) -> Blueprint:
+    """
+    Fast path: validate, quota-check, create the Blueprint row, and return it.
+    Called synchronously from the view — must complete in < 50 ms.
+    The actual AI call is dispatched as a Celery task after this returns.
+    """
     try:
         project = Project.objects.select_related("organization").get(
             pk=dto.project_id,
@@ -147,6 +152,21 @@ def generate_blueprint(dto) -> Blueprint:
         acting_user = User.objects.get(pk=dto.acting_user_id)
     except User.DoesNotExist:
         raise ServiceError("User not found.")
+
+    # ── Per-org daily quota ───────────────────────────────────────────────────
+    from django.conf import settings
+    from django.utils import timezone
+    daily_limit = getattr(settings, "BLUEPRINT_DAILY_LIMIT", 20)
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    todays_count = Blueprint.objects.filter(
+        organization_id=dto.organization_id,
+        created_at__gte=today_start,
+    ).count()
+    if todays_count >= daily_limit:
+        raise ServiceError(
+            f"Your organization has reached the daily limit of {daily_limit} blueprints. "
+            "Try again tomorrow, or contact support to raise your limit."
+        )
 
     blueprint = Blueprint.objects.create(
         project=project,
@@ -162,13 +182,29 @@ def generate_blueprint(dto) -> Blueprint:
         content=dto.prompt,
     )
 
+    return blueprint
+
+
+def run_blueprint_generation(blueprint_id: int) -> None:
+    """
+    Slow path: call the AI API and update the Blueprint record.
+    Called exclusively from the Celery task — never from the request cycle.
+    """
     try:
-        system     = _build_system_prompt(project)
-        full_prompt = f"{system}\n\nUser's request:\n{dto.prompt}"
+        blueprint = Blueprint.objects.select_related("project", "created_by").get(pk=blueprint_id)
+    except Blueprint.DoesNotExist:
+        logger.error("run_blueprint_generation: Blueprint %s not found", blueprint_id)
+        return
+
+    project = blueprint.project
+
+    try:
+        system      = _build_system_prompt(project)
+        full_prompt = f"{system}\n\nUser's request:\n{blueprint.prompt}"
 
         raw_text = _call_gemini(full_prompt)
 
-        # Strip markdown fences if Gemini adds them anyway
+        # Strip markdown fences if the model adds them anyway
         if raw_text.startswith("```"):
             lines    = raw_text.split("\n")
             lines    = [l for l in lines if not l.strip().startswith("```")]
@@ -184,28 +220,41 @@ def generate_blueprint(dto) -> Blueprint:
 
         blueprint.result      = result
         blueprint.is_complete = True
+        blueprint.error       = ""
         blueprint.save()
 
         logger.info(
-            "Blueprint generated for project %s by user %s",
-            project.name, acting_user.username
+            "Blueprint %s generated for project '%s'",
+            blueprint.uuid, project.name
         )
 
     except json.JSONDecodeError as e:
-        logger.error("Gemini returned invalid JSON for project %s: %s", project.name, e)
-        blueprint.error = f"Gemini returned invalid JSON: {e}"
+        logger.error("AI returned invalid JSON for blueprint %s: %s", blueprint.uuid, e)
+        blueprint.error = f"The AI returned invalid JSON: {e}"
         blueprint.save()
-        raise ServiceError("The AI returned an unexpected response. Please try again.")
 
-    except ServiceError:
-        raise
-
-    except Exception as e:
-        logger.exception("Gemini call failed for project %s: %s", project.name, e)
+    except ServiceError as e:
+        logger.warning("ServiceError for blueprint %s: %s", blueprint.uuid, e)
         blueprint.error = str(e)
         blueprint.save()
-        raise ServiceError(f"Generation failed: {e}")
 
+    except Exception as e:
+        logger.exception("Unexpected failure for blueprint %s: %s", blueprint.uuid, e)
+        blueprint.error = f"Generation failed: {e}"
+        blueprint.save()
+
+
+def generate_blueprint(dto) -> Blueprint:
+    """
+    Legacy synchronous entry-point kept for backwards compatibility
+    (e.g. management commands, tests, dev shell).
+    In production the view uses create_blueprint_record() + Celery task instead.
+    """
+    blueprint = create_blueprint_record(dto)
+    run_blueprint_generation(blueprint.id)
+    if blueprint.error:
+        raise ServiceError(blueprint.error)
+    blueprint.refresh_from_db()
     return blueprint
 
 
@@ -292,4 +341,4 @@ def cleanup_failed_blueprints(organization_id: int) -> int:
     count, _ = qs.delete()
     if count:
         logger.info("Cleaned up %s failed blueprints for org %s", count, organization_id)
-    return count    
+    return count

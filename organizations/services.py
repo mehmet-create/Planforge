@@ -153,9 +153,11 @@ def get_user_membership(user_id: int, organization_id: int):
     """
     Return the user's membership in a specific org, or None.
     Use this when you need the role — e.g. to decide what UI to show.
+    select_related('organization') means accessing membership.organization
+    never fires an extra query.
     """
     try:
-        return Membership.objects.get(
+        return Membership.objects.select_related("organization").get(
             user_id=user_id,
             organization_id=organization_id
         )
@@ -197,12 +199,21 @@ def invite_member(dto):
     except User.DoesNotExist:
         acting_user = None
 
-    membership = Membership.objects.create(
-        user=target_user,
-        organization_id=dto.organization_id,
-        role=dto.role,
-        invited_by=acting_user    # ← record who sent the invite
-    )
+    try:
+        membership = Membership.objects.create(
+            user=target_user,
+            organization_id=dto.organization_id,
+            role=dto.role,
+            invited_by=acting_user    # ← record who sent the invite
+        )
+    except Exception as e:
+        # unique_together (user, organization) protects against concurrent duplicate invites.
+        # Without this, two simultaneous requests would both pass the .exists() check above
+        # and then one would raise an unhandled IntegrityError (500). Catch it cleanly.
+        from django.db import IntegrityError
+        if isinstance(e, IntegrityError):
+            raise ServiceError(f"{target_user.username} is already a member of this organization.")
+        raise
 
     logger.info(
         "User %s added to org %s as %s by user %s",
@@ -287,10 +298,20 @@ def set_active_organization(request, organization_id: int):
 def get_active_organization(request):
     """
     Return the currently active Organization for this session, or None.
-    Called by the context processor so every template has access to it.
+    Called by the context processor AND the org decorators on every protected
+    request. We cache the result on the request object so the second caller
+    (whichever arrives first is the decorator; the context processor runs later
+    during template rendering) pays zero DB cost.
     """
     if not request.user.is_authenticated:
         return None
+
+    # ── Request-level cache ───────────────────────────────────────────────────
+    # The sentinel distinguishes "not yet resolved" from "resolved to None".
+    _UNSET = object.__new__(object)  # unique object; always falsy comparison fails
+    cached = getattr(request, "_active_org_cache", _UNSET)
+    if cached is not _UNSET:
+        return cached
 
     org_id = request.session.get("active_org_id")
 
@@ -299,10 +320,12 @@ def get_active_organization(request):
         first_org = get_user_organizations(request.user.id).first()
         if first_org:
             request.session["active_org_id"] = first_org.id
+        request._active_org_cache = first_org
         return first_org
 
     # Verify the user still belongs to the stored org
-    # (they could have been removed since last session)
+    # (they could have been removed since last session).
+    # select_related avoids a second query when we later access membership.organization.
     membership = get_user_membership(request.user.id, org_id)
     if not membership:
         # They no longer belong — clear the stale session value
@@ -311,6 +334,9 @@ def get_active_organization(request):
         first_org = get_user_organizations(request.user.id).first()
         if first_org:
             request.session["active_org_id"] = first_org.id
+        request._active_org_cache = first_org
         return first_org
 
-    return membership.organization
+    result = membership.organization
+    request._active_org_cache = result
+    return result

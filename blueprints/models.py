@@ -59,6 +59,13 @@ class Blueprint(models.Model):
         verbose_name        = "Blueprint"
         verbose_name_plural = "Blueprints"
         ordering            = ["-created_at"]
+        indexes = [
+            # get_project_blueprints() and get_org_blueprints() both filter on
+            # (organization_id, is_complete=True). A standalone is_complete index
+            # can't satisfy that — Postgres would still scan all org rows.
+            # This composite index makes those queries instant at any scale.
+            models.Index(fields=["organization", "is_complete"], name="blueprint_org_complete_idx"),
+        ]
 
     def __str__(self):
         return f"Blueprint for {self.project.name} — {self.created_at:%Y-%m-%d}"

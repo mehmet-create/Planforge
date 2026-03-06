@@ -29,7 +29,10 @@ def organization_context(request):
             "user_orgs":  [],
         }
 
-    # get_active_organization handles session caching and membership validation
+    # get_active_organization() caches its result on request._active_org_cache
+    # after the first call (set by the org decorator before the view ran).
+    # When we arrive here during template rendering, this is a free attribute
+    # lookup — zero DB queries on any page that uses an org decorator.
     active_org = get_active_organization(request)
 
     # Cache the org list in the session for 5 minutes to avoid a DB query
