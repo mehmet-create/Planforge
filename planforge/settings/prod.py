@@ -102,6 +102,36 @@ SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True  # allows submission to browser HSTS preload lists
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com data:; "
+    "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com; "
+    "connect-src 'self' https:; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "upgrade-insecure-requests"
+)
+
+PERMISSIONS_POLICY = (
+    "accelerometer=(), "
+    "autoplay=(), "
+    "camera=(), "
+    "display-capture=(), "
+    "encrypted-media=(), "
+    "fullscreen=(self), "
+    "geolocation=(), "
+    "gyroscope=(), "
+    "magnetometer=(), "
+    "microphone=(), "
+    "payment=(), "
+    "usb=()"
+)
 
 # Trusted proxy (Render)
 #
