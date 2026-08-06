@@ -2,6 +2,7 @@ from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from .middleware import SecurityHeadersMiddleware
+from planforge.settings import prod
 
 
 class SecurityHeadersMiddlewareTests(SimpleTestCase):
@@ -38,3 +39,9 @@ class SecurityHeadersMiddlewareTests(SimpleTestCase):
 
         self.assertEqual(response["Content-Security-Policy"], "default-src 'none'")
         self.assertEqual(response["Permissions-Policy"], "geolocation=()")
+
+    def test_production_csp_allows_required_external_assets(self):
+        csp = prod.CONTENT_SECURITY_POLICY
+
+        self.assertIn("https://cdnjs.cloudflare.com", csp)
+        self.assertIn("https://*.googleusercontent.com", csp)

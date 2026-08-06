@@ -106,10 +106,10 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline'; "
+    "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
-    "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com; "
+    "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://lh3.googleusercontent.com https://*.googleusercontent.com; "
     "connect-src 'self' https:; "
     "form-action 'self'; "
     "frame-ancestors 'none'; "
