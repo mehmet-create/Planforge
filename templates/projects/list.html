@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Projects{% if org %} — {{ org.name }}{% endif %} — Planforge{% endblock %}
+{% block title %}Projects{% if org %} | {{ org.name }}{% endif %} | Planforge{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -123,14 +123,24 @@
   <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:1.5rem;">
     {% if page_obj.has_previous %}
       <a href="?page={{ page_obj.previous_page_number }}" class="btn-ghost"
-         style="padding:0.4rem 0.75rem;font-size:0.85rem;">← Prev</a>
+         style="padding:0.4rem 0.75rem;font-size:0.85rem;">
+        <svg class="w-3.5 h-3.5" style="width:0.875rem;height:0.875rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Prev
+      </a>
     {% endif %}
     <span style="font-size:0.85rem;color:var(--muted);">
       Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
     </span>
     {% if page_obj.has_next %}
       <a href="?page={{ page_obj.next_page_number }}" class="btn-ghost"
-         style="padding:0.4rem 0.75rem;font-size:0.85rem;">Next →</a>
+         style="padding:0.4rem 0.75rem;font-size:0.85rem;">
+        Next
+        <svg class="w-3.5 h-3.5" style="width:0.875rem;height:0.875rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </a>
     {% endif %}
   </div>
 {% endif %}

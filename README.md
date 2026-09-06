@@ -125,6 +125,7 @@ CLOUDINARY_URL=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-120b
 CRON_SECRET=
 ```
 
@@ -235,6 +236,7 @@ python manage.py test tests -v 2 --settings=planforge.settings.dev
 | `GOOGLE_CLIENT_ID` | From Google Cloud Console *(optional)* |
 | `GOOGLE_CLIENT_SECRET` | From Google Cloud Console *(optional)* |
 | `GROQ_API_KEY` | From [console.groq.com](https://console.groq.com) *(optional)* |
+| `GROQ_MODEL` | Groq model for AI task generation, defaults to `openai/gpt-oss-120b` |
 
 ---
 

@@ -3,7 +3,7 @@ _activity_feed.html
 Expects:
   - logs : queryset/list of ActivityLog entries
   - show_project: boolean — show project name per entry (org-level feeds)
-  - see_all_url : optional — renders "See all activity →" footer link
+  - see_all_url : optional — renders the "See all activity" footer link
 {% endcomment %}
 
 {% if logs %}
@@ -59,7 +59,12 @@ Expects:
      style="font-size:0.75rem;color:var(--brand);text-decoration:none;"
      onmouseover="this.style.textDecoration='underline'"
      onmouseout="this.style.textDecoration='none'">
-    See all activity →
+    <span style="display:inline-flex;align-items:center;gap:0.25rem;">
+      See all activity
+      <svg class="w-3.5 h-3.5" style="width:0.875rem;height:0.875rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </span>
   </a>
 </div>
 {% endif %}

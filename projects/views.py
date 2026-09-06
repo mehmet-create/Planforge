@@ -458,8 +458,6 @@ def ai_generate_tasks(request, project_uuid):
     import json
     from django.http import JsonResponse
     from django.conf import settings
-    from groq import Groq
-
     project = request.project
     description = request.POST.get("description", "").strip()
 
@@ -472,6 +470,12 @@ def ai_generate_tasks(request, project_uuid):
     api_key = getattr(settings, "GROQ_API_KEY", "")
     if not api_key:
         return JsonResponse({"error": "AI generation is not configured."}, status=503)
+
+    try:
+        from groq import Groq
+    except ImportError:
+        logger.exception("AI task generator: Groq package is not installed")
+        return JsonResponse({"error": "AI generation is not installed on this server."}, status=503)
 
     # Build context from the project so suggestions are relevant
     existing_tasks = list(
@@ -512,11 +516,15 @@ Return this exact JSON structure:
     try:
         client = Groq(api_key=api_key)
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=getattr(settings, "GROQ_MODEL", "openai/gpt-oss-120b"),
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
             max_tokens=1200,
+            response_format={"type": "json_object"},
         )
+        finish_reason = getattr(response.choices[0], "finish_reason", None)
+        if finish_reason == "length":
+            return JsonResponse({"error": "AI response was too long. Please try a shorter description."}, status=500)
         raw = response.choices[0].message.content.strip()
 
         # Strip markdown code fences if the model adds them anyway

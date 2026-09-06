@@ -16,8 +16,10 @@ Legend:
 """
 
 import uuid
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 
 from tests.factories import (
@@ -556,6 +558,40 @@ class TaskTest(PlanforgeTestCase):
         # Should NOT create a comment and should NOT 500
         self.assertNotEqual(r.status_code, 500)
         self.assertFalse(self.task.comments.filter(body="").exists())
+
+    @override_settings(GROQ_API_KEY="")
+    def test_ai_generate_tasks_without_key_returns_json_error(self):
+        c = self._client_for(self.alice)
+        r = c.post(
+            reverse("projects:ai_generate_tasks", kwargs={"project_uuid": self.project.uuid}),
+            {"description": "Plan a launch campaign"},
+        )
+
+        self.assertEqual(r.status_code, 503)
+        self.assertEqual(r.json()["error"], "AI generation is not configured.")
+
+    @override_settings(GROQ_API_KEY="test-key", GROQ_MODEL="openai/gpt-oss-120b")
+    @patch("groq.Groq")
+    def test_ai_generate_tasks_uses_configured_model_and_json_mode(self, mock_groq):
+        message = SimpleNamespace(
+            content='{"tasks":[{"title":"Write launch checklist","description":"Create a checklist for launch readiness.","priority":"high"}]}'
+        )
+        choice = SimpleNamespace(message=message, finish_reason="stop")
+        mock_groq.return_value.chat.completions.create.return_value = SimpleNamespace(
+            choices=[choice]
+        )
+
+        c = self._client_for(self.alice)
+        r = c.post(
+            reverse("projects:ai_generate_tasks", kwargs={"project_uuid": self.project.uuid}),
+            {"description": "Plan a launch campaign"},
+        )
+
+        create_call = mock_groq.return_value.chat.completions.create.call_args.kwargs
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["tasks"][0]["title"], "Write launch checklist")
+        self.assertEqual(create_call["model"], "openai/gpt-oss-120b")
+        self.assertEqual(create_call["response_format"], {"type": "json_object"})
 
 
 # ---------------------------------------------------------------------------

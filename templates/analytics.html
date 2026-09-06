@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Analytics — {{ active_org.name }} — Planforge{% endblock %}
+{% block title %}Analytics | {{ active_org.name }} | Planforge{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -67,7 +67,12 @@
     </p>
   </div>
   <div class="page-header-actions">
-    <a href="{% url 'dashboard' %}" class="btn-ghost">← Dashboard</a>
+    <a href="{% url 'dashboard' %}" class="btn-ghost">
+      <svg class="w-3.5 h-3.5" style="width:0.875rem;height:0.875rem;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Dashboard
+    </a>
   </div>
 </div>
 
